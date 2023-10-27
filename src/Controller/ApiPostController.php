@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Post;
+use App\Form\PostType;
 use App\Repository\PostRepository;
 use App\Service\MailService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -39,18 +40,40 @@ class ApiPostController extends AbstractController
         $contenu = json_decode($request->getContent(), true);
 
         $post = new Post();
-        $post->setTitre($contenu['titre']);
-        $post->setContent($contenu['content']);
-        $post->setArchived(0);
 
-        $this->entityManager->persist($post);
-        $this->entityManager->flush();
+        $apiform = $this->createForm(PostType::class, $post, [
+            'csrf_protection' => false,
+        ]);
+
+        $apiform->submit($contenu);
+
+        if ($apiform->isSubmitted() && $apiform->isValid()) {
+
+            $this->entityManager->persist($post);
+            $this->entityManager->flush();
+
+            $this->mailService->sendEmail($contenu['titre']);
+
+            return new JsonResponse(['message' => 'Post créé avec succès'], Response::HTTP_CREATED);
+        }
+
+        $errors = [];
+        foreach ($apiform->getErrors(true) as $error) {
+            $errors[] = $error->getMessage();
+           // dd($error->getMessage());
+        }
+
+        return new JsonResponse(['errors' => $errors], Response::HTTP_BAD_REQUEST);
+
+        // $post->setTitre($contenu['titre']);
+        // $post->setContent($contenu['content']);
+        // $post->setArchived(0);
+
 
         #mail
-        $val = $this->mailService->sendEmail($contenu['titre']);
         // dd($val);
 
-        return new JsonResponse(['message' => 'Post ajouté avec succés'], Response::HTTP_CREATED);
+        // return new JsonResponse(['message' => 'Post ajouté avec succés'], Response::HTTP_CREATED);
     }
 
     #[Route('/api/posts/{id}', name: 'app_api_post_show')]

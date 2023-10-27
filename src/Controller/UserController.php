@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Form\UserType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -24,24 +25,47 @@ class UserController extends AbstractController
     public function registration(UserPasswordHasherInterface $pwdHasher, Request $request): JsonResponse
     {
         $user = new User();
-        $content = json_decode($request->getContent());
-      
-        $email = $content->email;
-        $plaintextPassword = $content->password;
-    
-        $hashedPassword = $pwdHasher->hashPassword(
-            $user,
-            $plaintextPassword
-        );
-    
-        $user->setPassword($hashedPassword);
-        $user->setEmail($email);
+        $content = json_decode($request->getContent(), true);
 
-        $this->entityManager->persist($user);
-        $this->entityManager->flush();
+        // dd($content['password']);
+
+        $form = $this->createForm(UserType::class, $user, [
+            'csrf_protection' => false,
+        ]);
 
 
-        return new JsonResponse(['message' => 'User ajouté avec succés'], Response::HTTP_CREATED);
+
+        $form->submit($content);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $plaintextPassword = $content['password'];
+            $hashedPassword = $pwdHasher->hashPassword(
+                $user,
+                $plaintextPassword
+            );
+            $user->setPassword($hashedPassword);
+            // dd($user);
+            $this->entityManager->persist($user);
+            $this->entityManager->flush();
+
+            return new JsonResponse(['message' => 'User ajouté avec succés'], Response::HTTP_CREATED);
+        }
+        // $email = $content->email;
+
+
+        // $user->setPassword($hashedPassword);
+        // $user->setEmail($email);
+
+        // $this->entityManager->persist($user);
+        // $this->entityManager->flush();
+        $errors = [];
+        foreach ($form->getErrors(true, true) as $error) {
+            $errors[] = $error->getMessage();
+            // dd($error->getMessage());
+        }
+
+        return new JsonResponse(['errors' => $errors], Response::HTTP_BAD_REQUEST);
+
+        // return new JsonResponse(['message' => 'User ajouté avec succés'], Response::HTTP_CREATED);
     }
-
 }
