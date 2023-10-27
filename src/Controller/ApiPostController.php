@@ -35,26 +35,28 @@ class ApiPostController extends AbstractController
     #[Route('/api/posts', name: 'app_api_post_new', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
-        $contenu = json_decode($request->getContent(), true);
 
-        $post = new Post();
+        return $this->postService->createPost($request);
+        // $contenu = json_decode($request->getContent(), true);
 
-        $apiform = $this->createForm(PostType::class, $post, [
-            'csrf_protection' => false,
-        ]);
+        // $post = new Post();
 
-        $apiform->submit($contenu);
+        // $apiform = $this->createForm(PostType::class, $post, [
+        //     'csrf_protection' => false,
+        // ]);
 
-        if ($apiform->isSubmitted() && $apiform->isValid()) {
+        // $apiform->submit($contenu);
 
-            $this->postService->processValidPost($post, $contenu);
+        // if ($apiform->isSubmitted() && $apiform->isValid()) {
 
-            return new JsonResponse(['message' => 'Post créé avec succès'], Response::HTTP_CREATED);
-        }
+        //     $this->postService->processValidPost($post, $contenu);
 
-        $errors = $this->postService->getFormErrors($apiform);
+        //     return new JsonResponse(['message' => 'Post créé avec succès'], Response::HTTP_CREATED);
+        // }
 
-        return new JsonResponse(['errors' => $errors], Response::HTTP_BAD_REQUEST);
+        // $errors = $this->postService->getFormErrors($apiform);
+
+        // return new JsonResponse(['errors' => $errors], Response::HTTP_BAD_REQUEST);
     }
 
 
