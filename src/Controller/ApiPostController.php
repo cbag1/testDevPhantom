@@ -37,26 +37,7 @@ class ApiPostController extends AbstractController
     {
 
         return $this->postService->createPost($request);
-        // $contenu = json_decode($request->getContent(), true);
-
-        // $post = new Post();
-
-        // $apiform = $this->createForm(PostType::class, $post, [
-        //     'csrf_protection' => false,
-        // ]);
-
-        // $apiform->submit($contenu);
-
-        // if ($apiform->isSubmitted() && $apiform->isValid()) {
-
-        //     $this->postService->processValidPost($post, $contenu);
-
-        //     return new JsonResponse(['message' => 'Post créé avec succès'], Response::HTTP_CREATED);
-        // }
-
-        // $errors = $this->postService->getFormErrors($apiform);
-
-        // return new JsonResponse(['errors' => $errors], Response::HTTP_BAD_REQUEST);
+    
     }
 
 
