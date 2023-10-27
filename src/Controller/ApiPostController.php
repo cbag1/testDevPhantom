@@ -6,36 +6,34 @@ use App\Entity\Post;
 use App\Form\PostType;
 use App\Repository\PostRepository;
 use App\Service\MailService;
+use App\Service\PostService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
-use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
 class ApiPostController extends AbstractController
 {
 
-    private $entityManager;
-    private $mailService;
+    private $postService;
 
-    public function __construct(EntityManagerInterface $entityManager, MailService $mailService)
+    public function __construct(PostService $postService)
     {
-        $this->mailService = $mailService;
-        $this->entityManager = $entityManager;
+        $this->postService = $postService;
     }
 
     #[Route('/api/posts', name: 'app_api_post', methods: ['GET'])]
     public function index(PostRepository $postRepository)
     {
-        $posts = $postRepository->findBy(['archived' => 0]);
-        return $this->json($posts, 200, [], ['groups' => 'post:read']);
+        $posts = $this->postService->getAllPosts();
+        return  $this->json($posts, 200, [], ['groups' => 'post:read']);
     }
 
+
     #[Route('/api/posts', name: 'app_api_post_new', methods: ['POST'])]
-    public function new(PostRepository $postRepository, NormalizerInterface $normalizer, Request $request): JsonResponse
+    public function create(Request $request): JsonResponse
     {
         $contenu = json_decode($request->getContent(), true);
 
@@ -49,48 +47,31 @@ class ApiPostController extends AbstractController
 
         if ($apiform->isSubmitted() && $apiform->isValid()) {
 
-            $this->entityManager->persist($post);
-            $this->entityManager->flush();
-
-            $this->mailService->sendEmail($contenu['titre']);
+            $this->postService->processValidPost($post, $contenu);
 
             return new JsonResponse(['message' => 'Post créé avec succès'], Response::HTTP_CREATED);
         }
 
-        $errors = [];
-        foreach ($apiform->getErrors(true) as $error) {
-            $errors[] = $error->getMessage();
-           // dd($error->getMessage());
-        }
+        $errors = $this->postService->getFormErrors($apiform);
 
         return new JsonResponse(['errors' => $errors], Response::HTTP_BAD_REQUEST);
-
-        // $post->setTitre($contenu['titre']);
-        // $post->setContent($contenu['content']);
-        // $post->setArchived(0);
-
-
-        #mail
-        // dd($val);
-
-        // return new JsonResponse(['message' => 'Post ajouté avec succés'], Response::HTTP_CREATED);
     }
 
+
+
     #[Route('/api/posts/{id}', name: 'app_api_post_show')]
-    public function show(PostRepository $postRepository, NormalizerInterface $normalizer, int $id)
+    public function show(PostRepository $postRepository, int $id)
     {
         $post = $postRepository->find($id);
         if (!$post) {
             return new JsonResponse(['message' => 'Post non trouvé'], Response::HTTP_NOT_FOUND);
         }
         return $this->json($post, 200, [], ['groups' => 'post:read']);
-        // $post = $postRepository->find($id);
-
-        // return new Response($normalizer->normalize($post));
     }
 
+
     #[Route('/api/posts/{id}/edit', name: 'app_api_post_edit', methods: ['PUT'])]
-    public function edit(PostRepository $postRepository, NormalizerInterface $normalizer, int $id, Request $request): JsonResponse
+    public function edit(PostRepository $postRepository, int $id, Request $request): JsonResponse
     {
         $post = $postRepository->find($id);
 
@@ -99,12 +80,8 @@ class ApiPostController extends AbstractController
         }
 
         $contenu = json_decode($request->getContent(), true);
-        // dd($contenu);
-        $post->setTitre($contenu['titre']);
-        $post->setContent($contenu['content']);
 
-        $this->entityManager->persist($post);
-        $this->entityManager->flush();
+        $this->postService->updatePost($post, $contenu);
 
         return new JsonResponse(['message' => 'User modifié avec succés']);
     }
@@ -118,9 +95,8 @@ class ApiPostController extends AbstractController
             return new JsonResponse(['message' => 'Post non trouvé'], Response::HTTP_NOT_FOUND);
         }
 
-        $post->setArchived(1);
-        $this->entityManager->persist($post);
-        $this->entityManager->flush();
+        $this->postService->deletePost($post);
+
 
         return new JsonResponse(['message' => 'Post supprimé avec succés']);
     }
