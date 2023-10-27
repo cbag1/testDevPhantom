@@ -87,7 +87,7 @@ class ApiPostController extends AbstractController
     }
 
     #[Route('/api/posts/{id}/delete', name: 'app_api_post_delete')]
-    public function delete(PostRepository $postRepository, NormalizerInterface $normalizer, int $id): JsonResponse
+    public function delete(PostRepository $postRepository, int $id): JsonResponse
     {
         $post = $postRepository->find($id);
 
